@@ -1,0 +1,1572 @@
+<!doctype html>
+<html lang="id">
+ <head>
+  <meta charset="UTF-8">
+  
+  <!-- KONFIGURASI RESPONSIVE & CROSS-BROWSER -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  
+  <!-- KONFIGURASI WEB APP (PWA Like Experience) -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#111b21">
+  
+  <title>Math Drone Investigator</title>
+  
+  <!-- MOCK SDK -->
+  <script>
+    window.dataSdk = {
+      init: async (handler) => {
+        window._dataHandler = handler;
+        const data = JSON.parse(localStorage.getItem('math_drone_data') || '[]');
+        setTimeout(() => handler.onDataChanged(data), 100);
+        return { isOk: true };
+      },
+      create: async (item) => {
+        const data = JSON.parse(localStorage.getItem('math_drone_data') || '[]');
+        item.__backendId = Date.now().toString() + Math.random().toString();
+        data.push(item);
+        localStorage.setItem('math_drone_data', JSON.stringify(data));
+        if (window._dataHandler) window._dataHandler.onDataChanged(data);
+        return { isOk: true };
+      },
+      update: async (item) => {
+        const data = JSON.parse(localStorage.getItem('math_drone_data') || '[]');
+        const index = data.findIndex(p => p.__backendId === item.__backendId);
+        if (index !== -1) {
+          data[index] = item;
+          localStorage.setItem('math_drone_data', JSON.stringify(data));
+          if (window._dataHandler) window._dataHandler.onDataChanged(data);
+          return { isOk: true };
+        }
+        return { isOk: false };
+      }
+    };
+
+    window.elementSdk = {
+      init: (config) => {
+        if(config.onConfigChange) config.onConfigChange(config.defaultConfig);
+      },
+      setConfig: (conf) => console.log("Config updated:", conf)
+    };
+  </script>
+
+  <style>
+    :root {
+      --primary-gradient: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+      --accent-color: #00f2fe;
+      --btn-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    /* CSS RESET & MOBILE OPTIMIZATION */
+    html, body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden; /* Mencegah scroll halaman saat bermain */
+      touch-action: none; /* Mencegah gesture browser (zoom/swipe back) */
+      -webkit-user-select: none; /* Safari */
+      -moz-user-select: none; /* Firefox */
+      -ms-user-select: none; /* IE10+/Edge */
+      user-select: none; /* Standard */
+      -webkit-tap-highlight-color: transparent; /* Hilangkan highlight biru di Android */
+    }
+
+    body {
+      box-sizing: border-box;
+      font-family: 'Orbitron', 'Arial', sans-serif;
+      background-color: #111b21;
+      background-image: linear-gradient(rgba(17, 27, 33, 0.92), rgba(17, 27, 33, 0.92)), url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+      background-repeat: repeat;
+      background-size: 500px;
+      color: #ffffff;
+    }
+
+    * { box-sizing: border-box; }
+
+    .container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch; /* Smooth scroll di iOS */
+    }
+
+    .screen {
+      display: none;
+      width: 100%;
+      max-width: 1200px;
+      animation: fadeIn 0.3s ease-in;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .screen.active { display: flex; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      font-size: clamp(24px, 5vw, 48px);
+      margin: 0 0 20px 0;
+      text-align: center;
+      background: linear-gradient(45deg, #00f2fe, #4facfe);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 30px rgba(79, 172, 254, 0.5);
+      line-height: 1.2;
+    }
+
+    h2 {
+      font-size: clamp(20px, 4vw, 32px);
+      margin: 0 0 20px 0;
+      color: var(--accent-color);
+      text-align: center;
+    }
+
+    p { font-size: clamp(14px, 3vw, 18px); }
+
+    .btn-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .btn {
+      background: var(--btn-gradient);
+      border: none;
+      color: white;
+      padding: clamp(12px, 2vh, 16px) clamp(20px, 4vw, 40px);
+      font-size: clamp(14px, 3vw, 18px);
+      font-weight: bold;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      font-family: 'Orbitron', 'Arial', sans-serif;
+      white-space: nowrap;
+    }
+
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6); }
+    .btn:active { transform: translateY(0); }
+    .btn-secondary { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+
+    .form-group { margin: 10px 0; width: 100%; max-width: 400px; }
+    
+    input, select {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 16px;
+      border: 2px solid #667eea;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      /* Memungkinkan seleksi teks HANYA di input form */
+      user-select: text; 
+      -webkit-user-select: text;
+    }
+    
+    select option { background: #302b63; }
+
+    .profile-card {
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid #667eea;
+      border-radius: 20px;
+      padding: 20px;
+      margin: 10px 0;
+      width: 100%;
+      max-width: 500px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .profile-info {
+      margin: 10px 0;
+      font-size: clamp(14px, 3vw, 18px);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .game-canvas-container {
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+      aspect-ratio: 4/3; 
+      max-height: 80vh; 
+      margin: 10px auto;
+      border: 3px solid var(--accent-color);
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(0, 242, 254, 0.5);
+      background: radial-gradient(ellipse at center, #1a1a2e 0%, #0f0c29 100%);
+    }
+
+    @media (max-width: 600px) {
+      .game-canvas-container {
+        width: 100%;
+        aspect-ratio: 3/4; 
+        max-height: 60vh;
+      }
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .question-display {
+      position: absolute;
+      top: 20%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      padding: 10px 20px;
+      border-radius: 15px;
+      border: 2px solid var(--accent-color);
+      font-size: clamp(16px, 4vw, 24px);
+      font-weight: bold;
+      z-index: 10;
+      width: 80%;
+      text-align: center;
+      pointer-events: none;
+      box-shadow: 0 0 20px rgba(0,0,0,0.8);
+    }
+
+    .stats-display {
+      position: absolute;
+      top: 15%;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 8px;
+      border-radius: 10px;
+      border: 1px solid #667eea;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .stat-item { margin: 2px 0; font-size: clamp(10px, 3vw, 16px); }
+
+    .game-controls {
+      position: absolute;
+      bottom: 15px;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 20;
+    }
+
+    .control-btn {
+      width: clamp(45px, 12vw, 70px);
+      height: clamp(45px, 12vw, 70px);
+      border-radius: 50%;
+      background: rgba(102, 126, 234, 0.3);
+      border: 2px solid #667eea;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(18px, 5vw, 28px);
+      color: var(--accent-color);
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      backdrop-filter: blur(5px);
+    }
+
+    .control-btn:active { background: rgba(102, 126, 234, 0.6); transform: scale(0.95); }
+
+    .mp-controls-container {
+      position: absolute;
+      bottom: 10px;
+      left: 0;
+      width: 100%;
+      height: 80px;
+      display: flex;
+      z-index: 25;
+      pointer-events: none;
+    }
+
+    .mp-player-controls {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+      align-items: flex-end;
+      padding-bottom: 5px;
+      pointer-events: auto;
+    }
+
+    .mp-btn {
+      width: clamp(40px, 10vw, 60px);
+      height: clamp(40px, 10vw, 60px);
+      font-size: clamp(16px, 4vw, 24px);
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255,255,255,0.5);
+    }
+
+    .game-over-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 30;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .game-over-overlay.active { display: flex; }
+
+    .leaderboard-container { width: 100%; overflow-x: auto; }
+    .leaderboard-table { min-width: 500px; }
+
+    .rules-container {
+        width: 100%;
+        max-width: 800px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid #667eea;
+        border-radius: 20px;
+        padding: 30px;
+        backdrop-filter: blur(10px);
+        text-align: left;
+    }
+
+    .rules-section { margin-bottom: 25px; }
+    .rules-title {
+        color: var(--accent-color);
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #667eea;
+        padding-bottom: 5px;
+    }
+    .rules-list { list-style-type: disc; padding-left: 20px; line-height: 1.6; }
+
+    .player-setup-grid {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 20px;
+        width: 100%;
+        margin-bottom: 20px;
+    }
+
+    .player-setup-card {
+        flex: 1;
+        min-width: 250px;
+        max-width: 350px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid #667eea;
+        padding: 20px;
+        border-radius: 15px;
+        text-align: center;
+    }
+
+    .player-controls-hint {
+        font-size: 14px;
+        color: #aaa;
+        margin-top: 10px;
+        background: rgba(0,0,0,0.3);
+        padding: 8px;
+        border-radius: 6px;
+        display: inline-block;
+        width: 100%;
+    }
+
+    .drone-select {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+
+    .drone-option {
+      width: 50px;
+      height: 50px;
+      border: 2px solid #667eea;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      background: rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .drone-option:hover { transform: scale(1.1); }
+    .drone-option.selected {
+      border-color: var(--accent-color);
+      background: rgba(0, 242, 254, 0.3);
+      box-shadow: 0 0 10px var(--accent-color);
+    }
+    
+    .notification {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      max-width: 300px;
+      background: rgba(0, 242, 254, 0.95);
+      color: #000;
+      padding: 20px;
+      border-radius: 12px;
+      font-weight: bold;
+      z-index: 100;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      border: 2px solid #fff;
+    }
+
+    @keyframes popIn {
+      from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+      to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
+ </head>
+ <body>
+  <div class="container">
+   <!-- Mode Selection Screen -->
+   <div id="modeScreen" class="screen active">
+    <h1 id="gameTitle">Math Drone Investigator</h1>
+    <p style="text-align: center; max-width: 600px; margin-bottom: 30px;">
+      🚀 Game edukatif trigonometri. <br>Hancurkan asteroid dengan matematika!
+    </p>
+    <div class="btn-container">
+      <button class="btn" onclick="showScreen('loginScreen')">Single Player</button>
+      <button class="btn btn-secondary" onclick="showScreen('multiplayerSetupScreen')">Multiplayer (2P)</button>
+      <button class="btn" onclick="showLeaderboard()">Leaderboard</button>
+      <button class="btn btn-secondary" onclick="showScreen('rulesScreen')">Aturan Main</button>
+    </div>
+   </div>
+
+   <!-- Rules Screen -->
+   <div id="rulesScreen" class="screen">
+    <h2>📜 Aturan Permainan</h2>
+    <div class="rules-container">
+        <div class="rules-section">
+            <div class="rules-title">🎮 Mode Single Player</div>
+            <ul class="rules-list">
+                <li>Jawab soal matematika dengan menembak asteroid yang memiliki jawaban benar.</li>
+                <li>Setiap jawaban benar memberi <b>100 Poin</b>.</li>
+                <li>Jawaban salah atau tertabrak asteroid akan mengurangi <b>1 Nyawa</b>.</li>
+                <li>Permainan berakhir jika nyawa habis.</li>
+                <li>Level kesulitan akan meningkat seiring progres permainan.</li>
+            </ul>
+        </div>
+        
+        <div class="rules-section">
+            <div class="rules-title">⚔️ Mode Multiplayer (2 Pemain)</div>
+            <ul class="rules-list">
+                <li>Dua pemain bermain di satu layar (Split Screen).</li>
+                <li>Siapa cepat dia dapat! Pemain pertama yang menembak jawaban benar mendapat <b>100 Poin</b>.</li>
+                <li>Begitu salah satu pemain menjawab benar, <b>soal akan langsung berganti</b>.</li>
+                <li>Jawaban salah mengurangi skor sebesar <b>50 Poin</b>.</li>
+                <li>Pemenang adalah pemain pertama yang mencapai skor <b>500</b>.</li>
+            </ul>
+        </div>
+
+        <div class="rules-section">
+            <div class="rules-title">🎛️ Kontrol</div>
+            <ul class="rules-list">
+                <li><b>Player 1 (Kiri):</b> Tombol A (Kiri), D (Kanan), W (Tembak) atau Tombol Layar.</li>
+                <li><b>Player 2 (Kanan):</b> Panah Kiri, Kanan, Atas atau Tombol Layar.</li>
+            </ul>
+        </div>
+    </div>
+    <div class="btn-container" style="margin-top: 20px;">
+        <button class="btn" onclick="showScreen('modeScreen')">Kembali ke Menu</button>
+    </div>
+   </div>
+
+   <!-- Login Screen -->
+   <div id="loginScreen" class="screen">
+    <h2>Login Single Player</h2>
+    <form id="loginForm" onsubmit="handleLogin(event)">
+     <div class="form-group">
+      <label>Nama:</label>
+      <input type="text" id="playerName" required placeholder="Masukkan nama Anda">
+     </div>
+     <div class="form-group">
+      <label>Provinsi:</label>
+      <select id="province" required>
+        <option value="">Pilih Provinsi</option>
+        <option value="DKI Jakarta">DKI Jakarta</option>
+        <option value="Jawa Barat">Jawa Barat</option>
+        <option value="Jawa Tengah">Jawa Tengah</option>
+        <option value="Jawa Timur">Jawa Timur</option>
+        <option value="Sumatera Utara">Sumatera Utara</option>
+        <option value="Bali">Bali</option>
+        <option value="Lainnya">Lainnya</option>
+      </select>
+     </div>
+     <div class="form-group">
+      <label>Sekolah:</label>
+      <input type="text" id="school" required placeholder="Nama sekolah Anda">
+     </div>
+     <div class="btn-container" style="margin-top: 20px;">
+      <button type="submit" class="btn" id="loginBtn">Masuk</button>
+      <button type="button" class="btn btn-secondary" onclick="showScreen('modeScreen')">Kembali</button>
+     </div>
+    </form>
+   </div>
+
+   <!-- Profile Screen -->
+   <div id="profileScreen" class="screen">
+    <h2>Profil Pemain</h2>
+    <div class="profile-card">
+     <div class="profile-info"><span>Nama:</span> <span id="profileName">-</span></div>
+     <div class="profile-info"><span>Poin:</span> <span id="profilePoints" style="color:yellow;">0</span></div>
+     <div class="profile-info"><span>Level Drone:</span> <span id="profileDroneLevel">1</span></div>
+     <div class="profile-info"><span>High Score:</span> <span id="profileHighScore">0</span></div>
+     
+     <div class="upgrade-section" style="margin-top:15px; border-top:1px solid #667eea; padding-top:10px;">
+      <h3 style="font-size:18px; color: var(--accent-color);">Upgrade Drone</h3>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+         <span>Biaya: <span id="upgradeCost">500</span> poin</span>
+         <button class="btn upgrade-btn" id="upgradeBtn" onclick="upgradeDrone()" style="padding: 8px 15px; font-size: 14px;">Upgrade</button>
+      </div>
+     </div>
+    </div>
+    <div class="btn-container">
+      <button class="btn" id="startGameBtn" onclick="startSinglePlayerGame()">Mulai Main</button>
+      <button class="btn btn-secondary" onclick="logout()">Keluar</button>
+    </div>
+   </div>
+
+   <!-- Single Player Game Screen -->
+   <div id="gameScreen" class="screen">
+    <div class="game-canvas-container" id="gameContainer">
+     <canvas id="gameCanvas"></canvas>
+     
+     <div class="question-display" id="questionDisplay">Siap?</div>
+     
+     <div class="stats-display">
+      <div class="stat-item">Poin: <span id="gamePoints">0</span></div>
+      <div class="stat-item">Level: <span id="gameLevel">1</span></div>
+      <div class="stat-item">Nyawa: <span id="gameLives">❤️❤️❤️</span></div>
+     </div>
+     
+     <div class="game-controls">
+      <div class="control-btn" id="leftBtn">←</div>
+      <div class="control-btn" id="shootBtn">🔥</div>
+      <div class="control-btn" id="rightBtn">→</div>
+     </div>
+     
+     <div class="game-over-overlay" id="gameOverOverlay">
+      <h2>Game Over!</h2>
+      <p style="font-size: 24px; margin: 20px 0;">Skor: <span id="finalScore">0</span></p>
+      <div class="btn-container">
+        <button class="btn" onclick="restartGame()">Main Lagi</button>
+        <button class="btn btn-secondary" onclick="backToProfile()">Profil</button>
+      </div>
+     </div>
+    </div>
+   </div>
+
+   <!-- Multiplayer Setup Screen -->
+   <div id="multiplayerSetupScreen" class="screen">
+    <h2>Setup Multiplayer (2 Pemain)</h2>
+    <p style="font-size: 14px; margin-bottom: 20px; color: #ccc;">Satu keyboard atau tombol layar untuk berdua!</p>
+    
+    <div class="player-setup-grid">
+        <!-- Player 1 -->
+        <div class="player-setup-card">
+            <h3 style="color: #00f2fe;">Pemain 1 (Kiri)</h3>
+            <input type="text" id="player1Name" placeholder="Nama P1" value="P1" style="text-align:center; margin-bottom:10px;">
+            <div class="player-controls-hint">Kontrol: A, W, D (atau Tombol Layar Kiri)</div>
+            <div class="drone-select">
+                <div class="drone-option selected" onclick="selectDrone(1, '🚀', this)">🚀</div>
+                <div class="drone-option" onclick="selectDrone(1, '🛸', this)">🛸</div>
+                <div class="drone-option" onclick="selectDrone(1, '🚁', this)">🚁</div>
+                <div class="drone-option" onclick="selectDrone(1, '🛩️', this)">🛩️</div>
+            </div>
+        </div>
+
+        <!-- Player 2 -->
+        <div class="player-setup-card">
+            <h3 style="color: #f5576c;">Pemain 2 (Kanan)</h3>
+            <input type="text" id="player2Name" placeholder="Nama P2" value="P2" style="text-align:center; margin-bottom:10px;">
+            <div class="player-controls-hint">Kontrol: ←, ↑, → (atau Tombol Layar Kanan)</div>
+            <div class="drone-select">
+                <div class="drone-option" onclick="selectDrone(2, '🚀', this)">🚀</div>
+                <div class="drone-option selected" onclick="selectDrone(2, '🛸', this)">🛸</div>
+                <div class="drone-option" onclick="selectDrone(2, '🚁', this)">🚁</div>
+                <div class="drone-option" onclick="selectDrone(2, '🛩️', this)">🛩️</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="btn-container" style="margin-top: 20px;">
+      <button class="btn" onclick="startMultiplayerGame()">Mulai Battle!</button>
+      <button class="btn btn-secondary" onclick="showScreen('modeScreen')">Kembali</button>
+    </div>
+   </div>
+
+   <!-- Multiplayer Game Screen -->
+   <div id="multiplayerScreen" class="screen">
+    <div class="game-canvas-container">
+     <canvas id="multiplayerCanvas"></canvas>
+     <div class="question-display" id="mpQuestionDisplay">Siap Battle?</div>
+     
+     <!-- New On-Screen Controls for Multiplayer -->
+     <div class="mp-controls-container">
+       <div class="mp-player-controls" id="p1Controls">
+          <div class="control-btn mp-btn" id="mpP1Left">←</div>
+          <div class="control-btn mp-btn" id="mpP1Shoot">🔥</div>
+          <div class="control-btn mp-btn" id="mpP1Right">→</div>
+       </div>
+       <div class="mp-player-controls" id="p2Controls">
+          <div class="control-btn mp-btn" id="mpP2Left">←</div>
+          <div class="control-btn mp-btn" id="mpP2Shoot">🔥</div>
+          <div class="control-btn mp-btn" id="mpP2Right">→</div>
+       </div>
+     </div>
+
+     <div class="game-over-overlay" id="mpGameOverOverlay">
+      <h2 id="mpWinner">Pemenang!</h2>
+      <div id="mpScores" style="margin: 20px 0; font-size: 18px;"></div>
+      <div class="btn-container">
+        <button class="btn" onclick="restartMultiplayer()">Main Sekarang</button>
+        <button class="btn btn-secondary" onclick="exitMultiplayer()">Menu Utama</button>
+      </div>
+     </div>
+    </div>
+   </div>
+
+   <!-- Leaderboard Screen -->
+   <div id="leaderboardScreen" class="screen">
+    <h2>🏆 Leaderboard</h2>
+    <div class="leaderboard-container">
+     <div class="filter-group" style="display:flex; justify-content:center; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+      <select id="leaderboardType" onchange="updateLeaderboard()" style="max-width:120px;">
+        <option value="national">Nasional</option>
+        <option value="province">Provinsi</option>
+        <option value="school">Sekolah</option>
+      </select>
+     </div>
+     <table class="leaderboard-table" style="width:100%; border-collapse:collapse;">
+      <thead style="background:rgba(102,126,234,0.3); border-bottom:2px solid #667eea;">
+       <tr>
+        <th style="padding:10px; text-align:left;">#</th>
+        <th style="padding:10px; text-align:left;">Nama</th>
+        <th style="padding:10px; text-align:left;">Sekolah</th>
+        <th style="padding:10px; text-align:left;">Skor</th>
+       </tr>
+      </thead>
+      <tbody id="leaderboardBody"></tbody>
+     </table>
+    </div>
+    <div class="btn-container" style="margin-top: 20px;">
+      <button class="btn" onclick="showScreen('modeScreen')">Kembali</button>
+    </div>
+   </div>
+  </div>
+
+  <script>
+    const defaultConfig = {
+      game_title: "Math Drone Investigator",
+      start_button_text: "Mulai Petualangan",
+      background_color: "#0f0c29",
+      surface_color: "#667eea",
+      text_color: "#ffffff",
+      primary_action_color: "#00f2fe",
+      secondary_action_color: "#f5576c",
+      font_family: "Orbitron",
+      font_size: 16
+    };
+
+    let config = { ...defaultConfig };
+    let allPlayerData = [];
+    let currentPlayer = null;
+    let gameState = null;
+    let multiplayerState = null;
+    let scaleFactor = 1; 
+    let mpRestartTimer = null;
+
+    // --- SOUND SYSTEM (Web Audio API Cross-Browser) ---
+    // Gunakan standar AudioContext atau prefix webkit untuk Safari
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContext();
+
+    const SoundSystem = {
+        resume: () => {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        },
+        playShoot: () => {
+            SoundSystem.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        },
+        playExplosion: () => { 
+            SoundSystem.resume();
+            const duration = 0.2;
+            const bufferSize = audioCtx.sampleRate * duration;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            noise.connect(gain);
+            gain.connect(audioCtx.destination);
+            noise.start();
+        },
+        playCorrect: () => {
+            SoundSystem.resume();
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1000, now);
+            osc.frequency.linearRampToValueAtTime(1500, now + 0.1);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0.001, now + 0.3);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(now + 0.3);
+        },
+        playWrong: () => {
+            SoundSystem.resume();
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(100, now + 0.2);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0.001, now + 0.2);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(now + 0.2);
+        },
+        playGameOver: () => {
+            SoundSystem.resume();
+            const now = audioCtx.currentTime;
+            [300, 250, 200, 150].forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now + i * 0.15);
+                gain.gain.setValueAtTime(0.1, now + i * 0.15);
+                gain.gain.linearRampToValueAtTime(0.001, now + i * 0.15 + 0.1);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now + i * 0.15);
+                osc.stop(now + i * 0.15 + 0.1);
+            });
+        }
+    };
+
+    // 45 Soal Trigonometri
+    const questionDatabase = {
+      easy: [
+        { question: "sin 30° = ?", answers: ["0.5", "0.7", "0.8"], correct: 0 },
+        { question: "cos 60° = ?", answers: ["0.5", "0.7", "0.8"], correct: 0 },
+        { question: "tan 45° = ?", answers: ["1", "0.5", "1.7"], correct: 0 },
+        { question: "sin 90° = ?", answers: ["1", "0", "0.5"], correct: 0 },
+        { question: "cos 0° = ?", answers: ["1", "0", "0.5"], correct: 0 },
+        { question: "sin 0° = ?", answers: ["0", "1", "0.5"], correct: 0 },
+        { question: "cos 90° = ?", answers: ["0", "1", "0.5"], correct: 0 },
+        { question: "tan 0° = ?", answers: ["0", "1", "Def"], correct: 0 },
+        { question: "sin 45° ≈ ?", answers: ["0.707", "0.5", "0.8"], correct: 0 },
+        { question: "cos 45° ≈ ?", answers: ["0.707", "0.5", "1"], correct: 0 },
+        { question: "tan 60° ≈ ?", answers: ["1.732", "1", "0.5"], correct: 0 },
+        { question: "sin 60° ≈ ?", answers: ["0.866", "0.5", "0.7"], correct: 0 },
+        { question: "cos 30° ≈ ?", answers: ["0.866", "0.5", "0.7"], correct: 0 },
+        { question: "tan 30° ≈ ?", answers: ["0.577", "1", "1.732"], correct: 0 },
+        { question: "sin 37° ≈ ?", answers: ["0.6", "0.8", "0.5"], correct: 0 }
+      ],
+      medium: [
+        { question: "sin 150° = ?", answers: ["0.5", "-0.5", "0.8"], correct: 0 },
+        { question: "cos 120° = ?", answers: ["-0.5", "0.5", "0.8"], correct: 0 },
+        { question: "tan 135° = ?", answers: ["-1", "1", "0"], correct: 0 },
+        { question: "sin 210° = ?", answers: ["-0.5", "0.5", "-0.8"], correct: 0 },
+        { question: "cos 240° = ?", answers: ["-0.5", "0.5", "-0.8"], correct: 0 },
+        { question: "tan 225° = ?", answers: ["1", "-1", "0"], correct: 0 },
+        { question: "sin 330° = ?", answers: ["-0.5", "0.5", "-0.8"], correct: 0 },
+        { question: "cos 300° = ?", answers: ["0.5", "-0.5", "0.8"], correct: 0 },
+        { question: "tan 315° = ?", answers: ["-1", "1", "0"], correct: 0 },
+        { question: "sin 180° = ?", answers: ["0", "1", "-1"], correct: 0 },
+        { question: "cos 180° = ?", answers: ["-1", "1", "0"], correct: 0 },
+        { question: "sin 270° = ?", answers: ["-1", "1", "0"], correct: 0 },
+        { question: "cos 270° = ?", answers: ["0", "1", "-1"], correct: 0 },
+        { question: "cosec 30° = ?", answers: ["2", "0.5", "1"], correct: 0 },
+        { question: "sec 60° = ?", answers: ["2", "0.5", "1"], correct: 0 }
+      ],
+      hard: [
+        { question: "sin²45° + cos²45° = ?", answers: ["1", "0", "0.5"], correct: 0 },
+        { question: "1 - sin²30° = ?", answers: ["0.75", "0.5", "0.25"], correct: 0 },
+        { question: "2.sin30.cos30 = ?", answers: ["0.866", "0.5", "1"], correct: 0 },
+        { question: "tan 45° + sin 90° = ?", answers: ["2", "1", "0"], correct: 0 },
+        { question: "sin 390° = ?", answers: ["0.5", "-0.5", "0.8"], correct: 0 },
+        { question: "cos 420° = ?", answers: ["0.5", "-0.5", "0.8"], correct: 0 },
+        { question: "sin(-30°) = ?", answers: ["-0.5", "0.5", "0.8"], correct: 0 },
+        { question: "cos(-60°) = ?", answers: ["0.5", "-0.5", "0.8"], correct: 0 },
+        { question: "Aturan Sin: a/sinA = ?", answers: ["b/sinB", "c/cosC", "a/sinB"], correct: 0 },
+        { question: "c² = a² + b² - ...", answers: ["2ab.cosC", "2ab.sinC", "ab.cosC"], correct: 0 },
+        { question: "sin(A+B) jk A=30,B=30", answers: ["0.866", "0.5", "1"], correct: 0 },
+        { question: "cos(2x) jk x=30", answers: ["0.5", "0.866", "1"], correct: 0 },
+        { question: "tan x = 1, x di K3?", answers: ["225°", "135°", "315°"], correct: 0 },
+        { question: "sin x = 0.5, x tumpul?", answers: ["150°", "120°", "210°"], correct: 0 },
+        { question: "cos x = -0.5, x lancip?", answers: ["Tidak Ada", "60°", "30°"], correct: 0 }
+      ]
+    };
+
+    let selectedDrones = { 1: '🚀', 2: '🛸' };
+
+    function selectDrone(player, drone, element) {
+      selectedDrones[player] = drone;
+      const siblings = element.parentElement.children;
+      for (let sibling of siblings) sibling.classList.remove('selected');
+      element.classList.add('selected');
+    }
+
+    function showScreen(screenId) {
+      // Resume audio context
+      SoundSystem.resume();
+      
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+      
+      if(screenId === 'gameScreen' || screenId === 'multiplayerScreen') {
+        setTimeout(resizeGameCanvas, 100);
+      }
+    }
+
+    function showNotification(message) {
+      const existing = document.querySelector('.notification');
+      if(existing) existing.remove();
+      
+      const notification = document.createElement('div');
+      notification.className = 'notification';
+      notification.innerHTML = message;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 2500);
+    }
+
+    function resizeGameCanvas() {
+        const containers = document.querySelectorAll('.game-canvas-container');
+        containers.forEach(container => {
+            const canvas = container.querySelector('canvas');
+            if(canvas) {
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+                scaleFactor = canvas.width / 800;
+                if(scaleFactor < 0.5) scaleFactor = 0.5;
+            }
+        });
+    }
+
+    window.addEventListener('resize', () => {
+        resizeGameCanvas();
+    });
+
+    async function handleLogin(event) {
+      event.preventDefault();
+      SoundSystem.resume();
+      const name = document.getElementById('playerName').value.trim();
+      if(!name) return;
+
+      const player = allPlayerData.find(p => p.name === name) || {
+          id: Date.now().toString(),
+          name: name,
+          province: document.getElementById('province').value,
+          school: document.getElementById('school').value.trim(),
+          points: 0,
+          drone_level: 1,
+          high_score: 0
+      };
+
+      if(!allPlayerData.includes(player)) {
+          await window.dataSdk.create(player);
+          currentPlayer = player;
+      } else {
+          currentPlayer = player;
+      }
+
+      updateProfileDisplay();
+      showScreen('profileScreen');
+    }
+
+    function updateProfileDisplay() {
+      if (!currentPlayer) return;
+      document.getElementById('profileName').textContent = currentPlayer.name;
+      document.getElementById('profilePoints').textContent = currentPlayer.points;
+      document.getElementById('profileDroneLevel').textContent = currentPlayer.drone_level;
+      document.getElementById('profileHighScore').textContent = currentPlayer.high_score;
+      
+      const cost = currentPlayer.drone_level * 500;
+      document.getElementById('upgradeCost').textContent = cost;
+      document.getElementById('upgradeBtn').disabled = currentPlayer.points < cost;
+    }
+
+    async function upgradeDrone() {
+      const cost = currentPlayer.drone_level * 500;
+      if (currentPlayer.points >= cost) {
+        SoundSystem.playCorrect();
+        currentPlayer.points -= cost;
+        currentPlayer.drone_level++;
+        await window.dataSdk.update(currentPlayer);
+        updateProfileDisplay();
+        showNotification('Drone Diupgrade! 🚀');
+      } else {
+        SoundSystem.playWrong();
+        showNotification('Poin Kurang!');
+      }
+    }
+
+    function logout() {
+      currentPlayer = null;
+      document.getElementById('loginForm').reset();
+      showScreen('modeScreen');
+    }
+
+    // -- SINGLE PLAYER GAME --
+    function startSinglePlayerGame() {
+      SoundSystem.resume();
+      showScreen('gameScreen');
+      initSinglePlayerGame();
+    }
+
+    function initSinglePlayerGame() {
+      resizeGameCanvas();
+      const canvas = document.getElementById('gameCanvas');
+      
+      gameState = {
+        player: { 
+            x: canvas.width / 2, 
+            y: canvas.height - 100,
+            width: 40, height: 40, speed: 5 
+        },
+        bullets: [],
+        enemies: [],
+        asteroids: [],
+        currentQuestion: null,
+        score: 0,
+        level: 1,
+        lives: 3,
+        keys: { left: false, right: false, shoot: false },
+        lastShot: 0,
+        gameOver: false
+      };
+      
+      generateNewQuestion();
+      gameLoop();
+    }
+
+    function generateNewQuestion() {
+      let qSet = questionDatabase.easy;
+      if(gameState.level > 2) qSet = questionDatabase.medium;
+      if(gameState.level > 4) qSet = questionDatabase.hard;
+
+      gameState.currentQuestion = qSet[Math.floor(Math.random() * qSet.length)];
+      document.getElementById('questionDisplay').textContent = gameState.currentQuestion.question;
+      spawnAsteroidWave();
+    }
+
+    function spawnAsteroidWave() {
+      if (!gameState || gameState.gameOver) return;
+      const canvas = document.getElementById('gameCanvas');
+      const q = gameState.currentQuestion;
+      
+      const shuffled = q.answers.map((ans, i) => ({ text: ans, correct: i === q.correct }))
+                        .sort(() => Math.random() - 0.5);
+      
+      gameState.asteroids = [];
+      const segmentWidth = canvas.width / shuffled.length;
+      
+      shuffled.forEach((item, i) => {
+          gameState.asteroids.push({
+              x: (i * segmentWidth) + (segmentWidth/2),
+              y: -50,
+              label: item.text,
+              isCorrect: item.correct,
+              speed: (1 + gameState.level * 0.2) * scaleFactor
+          });
+      });
+    }
+
+    function gameLoop() {
+      if (gameState.gameOver) return;
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      
+      ctx.fillStyle = config.background_color;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      const pSize = 40 * scaleFactor;
+      const aSize = 25 * scaleFactor;
+      const bSize = 4 * scaleFactor;
+      const speed = 5 * scaleFactor;
+      
+      gameState.player.y = canvas.height - (pSize * 2);
+      if (gameState.keys.left && gameState.player.x > pSize/2) gameState.player.x -= speed;
+      if (gameState.keys.right && gameState.player.x < canvas.width - pSize/2) gameState.player.x += speed;
+
+      if (gameState.keys.shoot && Date.now() - gameState.lastShot > 300) {
+        gameState.bullets.push({ x: gameState.player.x, y: gameState.player.y, speed: 7 * scaleFactor });
+        gameState.lastShot = Date.now();
+        SoundSystem.playShoot();
+      }
+
+      ctx.font = `${pSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.fillText('🚀', gameState.player.x, gameState.player.y + pSize/2);
+
+      ctx.fillStyle = config.primary_action_color;
+      gameState.bullets = gameState.bullets.filter(b => {
+          b.y -= b.speed;
+          ctx.fillRect(b.x - bSize/2, b.y, bSize, bSize * 3);
+          return b.y > 0;
+      });
+
+      gameState.asteroids.forEach((ast, idx) => {
+          ast.y += ast.speed;
+          
+          ctx.fillStyle = config.surface_color;
+          ctx.beginPath();
+          ctx.arc(ast.x, ast.y, aSize, 0, Math.PI * 2);
+          ctx.fill();
+          
+          ctx.fillStyle = 'white';
+          ctx.font = `bold ${14 * scaleFactor}px Arial`;
+          ctx.fillText(ast.label, ast.x, ast.y + (5 * scaleFactor));
+
+          gameState.bullets.forEach((b, bIdx) => {
+             const dist = Math.hypot(b.x - ast.x, b.y - ast.y);
+             if(dist < aSize) {
+                 gameState.bullets.splice(bIdx, 1);
+                 gameState.asteroids.splice(idx, 1);
+                 SoundSystem.playExplosion();
+                 
+                 if(ast.isCorrect) {
+                     SoundSystem.playCorrect();
+                     gameState.score += 100;
+                     gameState.level++;
+                     showNotification("Benar! +100");
+                     setTimeout(generateNewQuestion, 500);
+                 } else {
+                     SoundSystem.playWrong();
+                     gameState.lives--;
+                     showNotification("Salah! Nyawa berkurang");
+                     if(gameState.lives <= 0) endGame();
+                     else setTimeout(spawnAsteroidWave, 500);
+                 }
+             }
+          });
+          
+          if(ast.y > canvas.height) {
+             SoundSystem.playWrong();
+             gameState.lives--;
+             gameState.asteroids.splice(idx, 1);
+             showNotification("Asteroid Lolos!");
+             if(gameState.lives <= 0) endGame();
+             else if(gameState.asteroids.length === 0) setTimeout(spawnAsteroidWave, 500);
+          }
+      });
+      
+      document.getElementById('gamePoints').textContent = gameState.score;
+      document.getElementById('gameLevel').textContent = gameState.level;
+      document.getElementById('gameLives').textContent = '❤️'.repeat(gameState.lives);
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    async function endGame() {
+      SoundSystem.playGameOver();
+      gameState.gameOver = true;
+      document.getElementById('finalScore').textContent = gameState.score;
+      document.getElementById('gameOverOverlay').classList.add('active');
+      if (currentPlayer) {
+        currentPlayer.points += gameState.score;
+        if(gameState.score > currentPlayer.high_score) currentPlayer.high_score = gameState.score;
+        await window.dataSdk.update(currentPlayer);
+      }
+    }
+    
+    function restartGame() {
+        document.getElementById('gameOverOverlay').classList.remove('active');
+        initSinglePlayerGame();
+    }
+    
+    function backToProfile() {
+        document.getElementById('gameOverOverlay').classList.remove('active');
+        showScreen('profileScreen');
+    }
+
+    // -- MULTIPLAYER LOGIC (2 PLAYERS - SPLIT SCREEN) --
+    function startMultiplayerGame() {
+        SoundSystem.resume();
+        const names = [
+            document.getElementById('player1Name').value || "P1",
+            document.getElementById('player2Name').value || "P2"
+        ];
+        
+        showScreen('multiplayerScreen');
+        resizeGameCanvas();
+        
+        // Initial setup
+        multiplayerState = {
+            players: [
+                { id: 0, name: names[0], drone: selectedDrones[1], score: 0, keys: {l:false, r:false, s:false}, bullets: [] },
+                { id: 1, name: names[1], drone: selectedDrones[2], score: 0, keys: {l:false, r:false, s:false}, bullets: [] }
+            ],
+            asteroids: [],
+            particles: [], 
+            currentQuestion: null,
+            gameOver: false,
+            winner: null,
+            roundTransition: false,
+            celebrating: false, 
+            message: null
+        };
+
+        // Start round
+        resetMultiplayerPositions();
+        nextMultiplayerRound();
+        requestAnimationFrame(multiplayerLoop);
+    }
+
+    function nextMultiplayerRound() {
+        const levels = ['easy', 'medium', 'hard'];
+        const rndLevel = levels[Math.floor(Math.random() * levels.length)];
+        const qSet = questionDatabase[rndLevel];
+        const q = qSet[Math.floor(Math.random() * qSet.length)];
+        
+        multiplayerState.currentQuestion = q;
+        document.getElementById('mpQuestionDisplay').textContent = q.question;
+        
+        // Delay spawning asteroids
+        setTimeout(() => {
+            if(!multiplayerState.gameOver) generateMultiplayerAsteroids();
+        }, 3000);
+    }
+
+    function resetMultiplayerPositions() {
+        const canvas = document.getElementById('multiplayerCanvas');
+        const halfWidth = canvas.width / 2;
+        
+        // P1: Kiri
+        multiplayerState.players[0].x = halfWidth / 2;
+        multiplayerState.players[0].y = canvas.height - 100;
+        
+        // P2: Kanan
+        multiplayerState.players[1].x = halfWidth + (halfWidth / 2);
+        multiplayerState.players[1].y = canvas.height - 100;
+    }
+
+    function generateMultiplayerAsteroids() {
+        const canvas = document.getElementById('multiplayerCanvas');
+        const halfWidth = canvas.width / 2;
+        const q = multiplayerState.currentQuestion;
+        
+        multiplayerState.asteroids = [];
+        
+        const spawnForPlayer = (pid, offsetX) => {
+            const shuffled = q.answers.map((ans, i) => ({ text: ans, correct: i === q.correct }))
+                              .sort(() => Math.random() - 0.5);
+            
+            const segW = halfWidth / shuffled.length;
+            shuffled.forEach((item, i) => {
+                multiplayerState.asteroids.push({
+                    x: offsetX + (i * segW) + (segW/2),
+                    y: -50,
+                    label: item.text,
+                    isCorrect: item.correct,
+                    playerTarget: pid
+                });
+            });
+        };
+
+        spawnForPlayer(0, 0);                 
+        spawnForPlayer(1, halfWidth);                
+    }
+    
+    function spawnConfetti(x, y) {
+        for (let i = 0; i < 50; i++) {
+            multiplayerState.particles.push({
+                x: x,
+                y: y,
+                vx: (Math.random() - 0.5) * 15 * scaleFactor,
+                vy: (Math.random() - 0.5) * 15 * scaleFactor,
+                life: 1.0,
+                color: `hsl(${Math.random() * 360}, 100%, 50%)`
+            });
+        }
+    }
+
+    function multiplayerLoop() {
+        if(multiplayerState.gameOver) return;
+        const canvas = document.getElementById('multiplayerCanvas');
+        const ctx = canvas.getContext('2d');
+        const halfWidth = canvas.width / 2;
+        
+        ctx.fillStyle = config.background_color;
+        ctx.fillRect(0,0,canvas.width, canvas.height);
+        
+        // Draw Separator Line
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(halfWidth, 0); ctx.lineTo(halfWidth, canvas.height);
+        ctx.stroke();
+
+        // Player Labels
+        ctx.font = "bold 16px Arial";
+        ctx.fillStyle = "#aaa";
+        ctx.textAlign = "center";
+        ctx.fillText(multiplayerState.players[0].name, halfWidth/2, 30);
+        ctx.fillText(multiplayerState.players[1].name, halfWidth + halfWidth/2, 30);
+
+        const pSize = 40 * scaleFactor;
+        const speed = 5 * scaleFactor;
+
+        // Update & Draw Players
+        multiplayerState.players.forEach(p => {
+            let minX = (p.id === 0) ? 0 : halfWidth;
+            let maxX = (p.id === 0) ? halfWidth : canvas.width;
+            
+            // Movement
+            if(!multiplayerState.celebrating) {
+                if(p.keys.l && p.x > minX + 25) p.x -= speed;
+                if(p.keys.r && p.x < maxX - 25) p.x += speed;
+
+                // Shooting
+                if(p.keys.s && Date.now() - (p.lastShot || 0) > 400) {
+                    p.bullets.push({ x: p.x, y: p.y - 20, speed: 7 * scaleFactor });
+                    p.lastShot = Date.now();
+                    SoundSystem.playShoot();
+                }
+            }
+
+            // Draw Drone
+            ctx.font = `${pSize}px Arial`;
+            ctx.fillText(p.drone, p.x, p.y);
+            
+            // Draw Score
+            ctx.font = "bold 20px Arial";
+            ctx.fillStyle = "#00f2fe";
+            ctx.fillText(p.score, p.x, p.y - 40);
+
+            // Update Bullets
+            ctx.fillStyle = config.primary_action_color;
+            p.bullets = p.bullets.filter(b => {
+                b.y -= b.speed;
+                if(b.y < 0) return false;
+                ctx.fillRect(b.x - 2, b.y, 4, 12);
+                return true;
+            });
+        });
+
+        // Draw Confetti Particles
+        multiplayerState.particles.forEach((p, i) => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.02;
+            p.vy += 0.2; // gravity
+
+            ctx.globalAlpha = p.life;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 4 * scaleFactor, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+
+            if(p.life <= 0) multiplayerState.particles.splice(i, 1);
+        });
+
+        // Draw Celebration Message
+        if(multiplayerState.message) {
+            ctx.fillStyle = "yellow";
+            ctx.font = `bold ${40 * scaleFactor}px Arial`;
+            ctx.textAlign = "center";
+            ctx.fillText(multiplayerState.message, canvas.width/2, canvas.height/2);
+        }
+
+        // Skip asteroid updates if in transition/celebration
+        if(multiplayerState.roundTransition || multiplayerState.celebrating) {
+             requestAnimationFrame(multiplayerLoop);
+             return;
+        }
+
+        // Update Asteroids Logic
+        let roundWon = false;
+        let winningPlayer = null;
+
+        multiplayerState.asteroids = multiplayerState.asteroids.filter(ast => {
+            if(roundWon) return false;
+
+            ast.y += (1.5 * scaleFactor);
+            
+            ctx.fillStyle = config.surface_color;
+            ctx.beginPath();
+            ctx.arc(ast.x, ast.y, 25 * scaleFactor, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = "white";
+            ctx.font = `bold ${14 * scaleFactor}px Arial`;
+            ctx.fillText(ast.label, ast.x, ast.y + 5);
+
+            let p = multiplayerState.players[ast.playerTarget];
+            let hit = false;
+            
+            p.bullets.forEach((b, bIdx) => {
+                if(!hit && Math.hypot(b.x - ast.x, b.y - ast.y) < 30) {
+                    p.bullets.splice(bIdx, 1);
+                    hit = true;
+                    SoundSystem.playExplosion();
+                    
+                    if(ast.isCorrect) {
+                        p.score += 100;
+                        roundWon = true;
+                        winningPlayer = p;
+                        SoundSystem.playCorrect();
+                    } else {
+                        SoundSystem.playWrong();
+                        p.score = Math.max(0, p.score - 50);
+                    }
+                }
+            });
+
+            if(hit) return false;
+            
+            if(ast.y > canvas.height) {
+                ast.y = -50; 
+                return true; 
+            }
+            
+            return true;
+        });
+
+        if(roundWon && winningPlayer) {
+            handleRoundWin(winningPlayer);
+        }
+
+        requestAnimationFrame(multiplayerLoop);
+    }
+
+    function handleRoundWin(winner) {
+        if(multiplayerState.roundTransition) return;
+        multiplayerState.roundTransition = true;
+        multiplayerState.celebrating = true;
+        
+        spawnConfetti(winner.x, winner.y);
+        multiplayerState.message = "LUAR BIASA!";
+        
+        multiplayerState.asteroids = [];
+
+        if(winner.score >= 500) {
+             endMultiplayerGame(winner);
+             return;
+        }
+
+        // Immediately update question text
+        const levels = ['easy', 'medium', 'hard'];
+        const rndLevel = levels[Math.floor(Math.random() * levels.length)];
+        const qSet = questionDatabase[rndLevel];
+        const nextQ = qSet[Math.floor(Math.random() * qSet.length)];
+        
+        multiplayerState.currentQuestion = nextQ;
+        // Small visual delay before text update for polish
+        setTimeout(() => {
+             document.getElementById('mpQuestionDisplay').textContent = nextQ.question;
+        }, 1000);
+
+        // Resume after 3 seconds
+        setTimeout(() => {
+            if(!multiplayerState.gameOver) {
+                multiplayerState.celebrating = false;
+                multiplayerState.message = null;
+                generateMultiplayerAsteroids();
+                multiplayerState.roundTransition = false;
+            }
+        }, 3000);
+    }
+
+    function endMultiplayerGame(winner) {
+        SoundSystem.playGameOver();
+        multiplayerState.gameOver = true;
+        document.getElementById('mpWinner').textContent = `${winner.name} Menang! 🏆`;
+        
+        let scoresHtml = multiplayerState.players.map(p => 
+            `<div style="margin:5px;">${p.name}: <b>${p.score}</b></div>`
+        ).join('');
+        
+        // Add countdown text
+        scoresHtml += `<div style="margin-top:15px; font-size:14px; color:#00f2fe;">
+            Ronde berikutnya dalam <span id="autoRestartCount">3</span> detik...
+        </div>`;
+
+        document.getElementById('mpScores').innerHTML = scoresHtml;
+        document.getElementById('mpGameOverOverlay').classList.add('active');
+
+        // Auto restart logic
+        let count = 3;
+        const countInterval = setInterval(() => {
+            count--;
+            const el = document.getElementById('autoRestartCount');
+            if(el) el.textContent = count;
+            if(count <= 0) clearInterval(countInterval);
+        }, 1000);
+
+        mpRestartTimer = setTimeout(() => {
+            clearInterval(countInterval);
+            if(document.getElementById('mpGameOverOverlay').classList.contains('active')) {
+                restartMultiplayer();
+            }
+        }, 3000);
+    }
+
+    function restartMultiplayer() {
+        if(mpRestartTimer) clearTimeout(mpRestartTimer);
+        document.getElementById('mpGameOverOverlay').classList.remove('active');
+        startMultiplayerGame();
+    }
+    
+    function exitMultiplayer() {
+        if(mpRestartTimer) clearTimeout(mpRestartTimer);
+        showScreen('modeScreen');
+    }
+
+    // -- CONTROLS MAPPING --
+    // KEYBOARD
+    function handleMultiplayerKey(key, isPressed) {
+        if(!multiplayerState) return;
+        // P1
+        if(key === 'a') multiplayerState.players[0].keys.l = isPressed;
+        if(key === 'd') multiplayerState.players[0].keys.r = isPressed;
+        if(key === 'w') multiplayerState.players[0].keys.s = isPressed;
+        // P2
+        if(key === 'ArrowLeft') multiplayerState.players[1].keys.l = isPressed;
+        if(key === 'ArrowRight') multiplayerState.players[1].keys.r = isPressed;
+        if(key === 'ArrowUp') multiplayerState.players[1].keys.s = isPressed;
+    }
+
+    window.addEventListener('keydown', e => {
+        if(gameState && !gameState.gameOver) {
+            if(e.key === 'ArrowLeft') gameState.keys.left = true;
+            if(e.key === 'ArrowRight') gameState.keys.right = true;
+            if(e.key === ' ' || e.key === 'ArrowUp') gameState.keys.shoot = true;
+        }
+        if(multiplayerState && !multiplayerState.gameOver) {
+            handleMultiplayerKey(e.key, true);
+        }
+    });
+
+    window.addEventListener('keyup', e => {
+        if(gameState) {
+            if(e.key === 'ArrowLeft') gameState.keys.left = false;
+            if(e.key === 'ArrowRight') gameState.keys.right = false;
+            if(e.key === ' ' || e.key === 'ArrowUp') gameState.keys.shoot = false;
+        }
+        if(multiplayerState) {
+            handleMultiplayerKey(e.key, false);
+        }
+    });
+
+    // TOUCH HANDLERS (SINGLE PLAYER)
+    ['leftBtn','rightBtn','shootBtn'].forEach(id => {
+        const btn = document.getElementById(id);
+        if(!btn) return;
+        const action = id.replace('Btn', '');
+        const setK = (v) => { if(gameState) gameState.keys[action] = v; };
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); setK(true); });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); setK(false); });
+        btn.addEventListener('mousedown', () => setK(true));
+        btn.addEventListener('mouseup', () => setK(false));
+    });
+
+    // TOUCH HANDLERS (MULTIPLAYER)
+    function setupMpTouch(btnId, pIndex, action) {
+        const btn = document.getElementById(btnId);
+        if(!btn) return;
+        const setK = (v) => { if(multiplayerState) multiplayerState.players[pIndex].keys[action] = v; };
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); setK(true); });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); setK(false); });
+        btn.addEventListener('mousedown', () => setK(true));
+        btn.addEventListener('mouseup', () => setK(false));
+    }
+
+    setupMpTouch('mpP1Left', 0, 'l');
+    setupMpTouch('mpP1Right', 0, 'r');
+    setupMpTouch('mpP1Shoot', 0, 's');
+
+    setupMpTouch('mpP2Left', 1, 'l');
+    setupMpTouch('mpP2Right', 1, 'r');
+    setupMpTouch('mpP2Shoot', 1, 's');
+
+    // -- LEADERBOARD FUNCTIONS --
+    function showLeaderboard() {
+      showScreen('leaderboardScreen');
+      updateLeaderboard();
+    }
+
+    function updateLeaderboard() {
+        const tbody = document.getElementById('leaderboardBody');
+        if(!tbody) return;
+        tbody.innerHTML = '';
+        
+        // Sort by high score
+        const sortedPlayers = [...allPlayerData].sort((a, b) => (b.high_score || 0) - (a.high_score || 0));
+
+        if (sortedPlayers.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Belum ada data</td></tr>';
+            return;
+        }
+
+        sortedPlayers.slice(0, 10).forEach((p, i) => {
+            const tr = document.createElement('tr');
+            let rankEmoji = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
+            
+            tr.innerHTML = `
+                <td style="padding:10px;">${rankEmoji}</td>
+                <td style="padding:10px;">${p.name || 'Anonim'}</td>
+                <td style="padding:10px;">${p.school || '-'}</td>
+                <td style="padding:10px; color:#00f2fe; font-weight:bold;">${p.high_score || 0}</td>
+            `;
+            tr.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Init SDK
+    (async function init() {
+      await window.dataSdk.init({ onDataChanged: (d) => allPlayerData = d });
+    })();
+  </script>
+ </body>
+</html>
